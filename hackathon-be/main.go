@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 	_ "github.com/joho/godotenv"
 	"github.com/oklog/ulid"
 	_ "github.com/oklog/ulid"
@@ -37,17 +36,7 @@ type responseMessage struct {
 // ① GoプログラムからMySQLへ接続
 var db *sql.DB
 
-func loadEnv() {
-	//.envファイルの読み込み
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Printf("読み込み出来ませんでした: %v", err)
-		log.Fatalf("fail: loadEnv, %v\n", err)
-	}
-
-}
 func init() {
-	loadEnv()
 	// DB接続のための準備
 	mysqlUser := os.Getenv("MYSQL_USER")
 	mysqlPwd := os.Getenv("MYSQL_PWD")
