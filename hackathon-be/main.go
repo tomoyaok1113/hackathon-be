@@ -57,25 +57,22 @@ func init() {
 
 // ② /userでリクエストされたらnameパラメーターと一致する名前を持つレコードをJSON形式で返す
 func handler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	switch r.Method {
 	case http.MethodGet:
-		// ②-1
-		name := r.URL.Query().Get("name") // To be filled
-		if name == "" {
-			log.Println("fail: name is empty")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		// ②-2
-		rows, err := db.Query("SELECT id, name, age FROM user WHERE name=?", name)
+		rows, err := db.Query("SELECT id, name, age FROM user")
 		if err != nil {
 			log.Printf("fail: db.Query, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		// ②-3
 		users := make([]UserResForHTTP, 0)
 		for rows.Next() {
 			var u UserResForHTTP
@@ -166,7 +163,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// ② /userでリクエストされたらnameパラメーターと一致する名前を持つレコードをJSON形式で返す
 	http.HandleFunc("/user", handler)
 
 	// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
