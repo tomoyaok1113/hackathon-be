@@ -19,14 +19,14 @@ import (
 )
 
 type UserResForHTTP struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-	Age  int    `json:"age"`
+	Id    string `json:"id"`
+	Name  string `json:"name"`
+	Point int    `json:"point"`
 }
 
 type UserImportFromHTTP struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
+	Name  string `json:"name"`
+	Point int    `json:"point"`
 }
 
 type responseMessage struct {
@@ -58,7 +58,7 @@ func init() {
 // ② /userでリクエストされたらnameパラメーターと一致する名前を持つレコードをJSON形式で返す
 func handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
-	w.Header().Set("Access-Control-Allow-Origin", "https://hackathon-fe.vercel.app")
+	w.Header().Set("Access-Control-Allow-Origin", "https://hackathon-fe.vercel.app/")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -66,7 +66,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		rows, err := db.Query("SELECT id, name, age FROM user")
+		rows, err := db.Query("SELECT id, name, point FROM user3")
 		if err != nil {
 			log.Printf("fail: db.Query, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -76,7 +76,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		users := make([]UserResForHTTP, 0)
 		for rows.Next() {
 			var u UserResForHTTP
-			if err := rows.Scan(&u.Id, &u.Name, &u.Age); err != nil {
+			if err := rows.Scan(&u.Id, &u.Name, &u.Point); err != nil {
 				log.Printf("fail: rows.Scan, %v\n", err)
 
 				if err := rows.Close(); err != nil { // 500を返して終了するが、その前にrowsのClose処理が必要
@@ -115,16 +115,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if v.Age < 20 {
-			log.Println("fail: age is too young")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if v.Age > 80 {
-			log.Println("fail: age is too old")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 		id := strconv.FormatUint(ulid.Timestamp(time.Now()), 10)
 		tx, err := db.Begin()
 		if err != nil {
@@ -132,7 +122,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec("INSERT INTO user (id,name,age) VALUE (?,?,?)", id, v.Name, v.Age)
+		_, err = tx.Exec("INSERT INTO user3 (id,name,point) VALUE (?,?,?)", id, v.Name, v.Point)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.Prepare, %v\n", err)
@@ -144,7 +134,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
 		bytes, err := json.Marshal(responseMessage{
 			Id: id,
 		})
