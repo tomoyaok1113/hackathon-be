@@ -1,9 +1,7 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/joho/godotenv"
 	"github.com/oklog/ulid"
@@ -11,13 +9,16 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 )
 
+type ResponseMessage struct {
+	Id       string `json:"id"`
+	FromName string `json:"fromName"`
+	Point    int    `json:"point"`
+	Message  string `json:"message"`
+}
 type ImportMessage struct {
 	Id       string `json:"id"`
 	FromName string `json:"fromName"`
@@ -25,35 +26,7 @@ type ImportMessage struct {
 	Point    int    `json:"point"`
 	Message  string `json:"message"`
 }
-type ExportMessage struct {
-	Id       string `json:"id"`
-	FromName string `json:"fromName"`
-	Point    int    `json:"point"`
-	Message  string `json:"message"`
-}
 
-// ① GoプログラムからMySQLへ接続
-
-func init() {
-	mysqlUser := os.Getenv("MYSQL_USER")
-	mysqlPwd := os.Getenv("MYSQL_PWD")
-	mysqlHost := os.Getenv("MYSQL_HOST")
-	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
-
-	// ①-2
-	connStr := fmt.Sprintf("%s:%s@%s/%s", mysqlUser, mysqlPwd, mysqlHost, mysqlDatabase)
-	_db, err := sql.Open("mysql", connStr)
-	if err != nil {
-		log.Fatalf("fail: sql.Open, %v\n", err)
-	}
-	// ①-3
-	if err := _db.Ping(); err != nil {
-		log.Fatalf("fail: _db.Ping, %v\n", err)
-	}
-	db = _db
-}
-
-// ② /messageでリクエストされたらnameパラメーターと一致する名前を持つレコードをJSON形式で返す
 func handlerMessage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -72,9 +45,9 @@ func handlerMessage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		users := make([]ExportMessage, 0)
+		users := make([]ResponseMessage, 0)
 		for rows.Next() {
-			var u ExportMessage
+			var u ResponseMessage
 			if err := rows.Scan(&u.Id, &u.FromName, &u.Point, &u.Message); err != nil {
 				log.Printf("fail: rows.Scan, %v\n", err)
 
@@ -139,32 +112,4 @@ func handlerMessage(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-}
-
-func main() {
-	http.HandleFunc("/message", handlerMessage)
-
-	// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
-	closeDBWithSysCallMessage()
-	// 8000番ポートでリクエストを待ち受ける
-	log.Println("Listening...")
-	if err := http.ListenAndServe(":8000", nil); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
-func closeDBWithSysCallMessage() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		s := <-sig
-		log.Printf("received syscall, %v", s)
-
-		if err := db.Close(); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("success: db.Close()")
-		os.Exit(0)
-	}()
 }

@@ -18,19 +18,15 @@ import (
 	"time"
 )
 
-type UserResForHTTP struct {
+type ResponseUser struct {
 	Id    string `json:"id"`
 	Name  string `json:"name"`
 	Point int    `json:"point"`
 }
 
-type UserImportFromHTTP struct {
+type ImportUser struct {
 	Name  string `json:"name"`
 	Point int    `json:"point"`
-}
-
-type responseMessage struct {
-	Id string `json:"id"`
 }
 
 // ① GoプログラムからMySQLへ接続
@@ -56,7 +52,7 @@ func init() {
 }
 
 // ② /userでリクエストされたらnameパラメーターと一致する名前を持つレコードをJSON形式で返す
-func handler(w http.ResponseWriter, r *http.Request) {
+func handlerUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -73,9 +69,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		users := make([]UserResForHTTP, 0)
+		users := make([]ResponseUser, 0)
 		for rows.Next() {
-			var u UserResForHTTP
+			var u ResponseUser
 			if err := rows.Scan(&u.Id, &u.Name, &u.Point); err != nil {
 				log.Printf("fail: rows.Scan, %v\n", err)
 
@@ -98,7 +94,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	case http.MethodPost:
-		var v UserImportFromHTTP
+		var v ImportUser
 		t, _ := io.ReadAll(r.Body)
 		if err := json.Unmarshal([]byte(t), &v); err != nil {
 			log.Printf("fail: json.Unmarshal, %v\n", err)
@@ -134,16 +130,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		bytes, err := json.Marshal(responseMessage{
-			Id: id,
-		})
 		if err != nil {
 			log.Printf("fail: json.Marshal, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write(bytes)
 	default:
 		log.Printf("fail: HTTP Method is %s\n", r.Method)
 		w.WriteHeader(http.StatusBadRequest)
@@ -152,7 +144,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/user", handler)
+	http.HandleFunc("/user", handlerUser)
+	http.HandleFunc("/message", handlerMessage)
 
 	// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
 	closeDBWithSysCall()
