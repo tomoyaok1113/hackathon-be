@@ -62,7 +62,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		rows, err := db.Query("SELECT id, name, point FROM user3")
+		rows, err := db.Query("SELECT id, name, point FROM userlist")
 		if err != nil {
 			log.Printf("fail: db.Query, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -118,7 +118,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec("INSERT INTO user3 (id,name,point) VALUE (?,?,?)", id, v.Name, v.Point)
+		_, err = tx.Exec("INSERT INTO userlist (id,name,point) VALUE (?,?,?)", id, v.Name, v.Point)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.Prepare, %v\n", err)
