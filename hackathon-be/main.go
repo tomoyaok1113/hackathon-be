@@ -146,6 +146,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/user", handlerUser)
 	http.HandleFunc("/message", handlerMessage)
+	http.HandleFunc("/messagesub", handlerMessageForSubmitlist)
 
 	// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
 	closeDBWithSysCall()
