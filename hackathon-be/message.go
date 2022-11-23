@@ -1,9 +1,7 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/joho/godotenv"
 	"github.com/oklog/ulid"
@@ -11,48 +9,25 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 	"time"
 )
 
-type ResponseUser struct {
-	Id    string `json:"id"`
-	Name  string `json:"name"`
-	Point int    `json:"point"`
+type ResponseMessage struct {
+	Id       string `json:"id"`
+	FromName string `json:"fromName"`
+	Point    int    `json:"point"`
+	Message  string `json:"message"`
+}
+type ImportMessage struct {
+	Id       string `json:"id"`
+	FromName string `json:"fromName"`
+	ToName   string `json:"toName"`
+	Point    int    `json:"point"`
+	Message  string `json:"message"`
 }
 
-type ImportUser struct {
-	Name  string `json:"name"`
-	Point int    `json:"point"`
-}
-
-// ① GoプログラムからMySQLへ接続
-var db *sql.DB
-
-func init() {
-	mysqlUser := os.Getenv("MYSQL_USER")
-	mysqlPwd := os.Getenv("MYSQL_PWD")
-	mysqlHost := os.Getenv("MYSQL_HOST")
-	mysqlDatabase := os.Getenv("MYSQL_DATABASE")
-
-	// ①-2
-	connStr := fmt.Sprintf("%s:%s@%s/%s", mysqlUser, mysqlPwd, mysqlHost, mysqlDatabase)
-	_db, err := sql.Open("mysql", connStr)
-	if err != nil {
-		log.Fatalf("fail: sql.Open, %v\n", err)
-	}
-	// ①-3
-	if err := _db.Ping(); err != nil {
-		log.Fatalf("fail: _db.Ping, %v\n", err)
-	}
-	db = _db
-}
-
-// ② /userでリクエストされたらnameパラメーターと一致する名前を持つレコードをJSON形式で返す
-func handlerUser(w http.ResponseWriter, r *http.Request) {
+func handlerMessage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -62,17 +37,18 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		rows, err := db.Query("SELECT id, name, point FROM userlist")
+		username := r.URL.Query().Get("fromname")
+		rows, err := db.Query("SELECT id, fromname, point, message FROM messagelist WHERE toname=?", username)
 		if err != nil {
 			log.Printf("fail: db.Query, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		users := make([]ResponseUser, 0)
+		users := make([]ResponseMessage, 0)
 		for rows.Next() {
-			var u ResponseUser
-			if err := rows.Scan(&u.Id, &u.Name, &u.Point); err != nil {
+			var u ResponseMessage
+			if err := rows.Scan(&u.Id, &u.FromName, &u.Point, &u.Message); err != nil {
 				log.Printf("fail: rows.Scan, %v\n", err)
 
 				if err := rows.Close(); err != nil { // 500を返して終了するが、その前にrowsのClose処理が必要
@@ -94,20 +70,15 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(bytes)
 	case http.MethodPost:
-		var v ImportUser
+		var v ImportMessage
 		t, _ := io.ReadAll(r.Body)
 		if err := json.Unmarshal([]byte(t), &v); err != nil {
 			log.Printf("fail: json.Unmarshal, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if v.Name == "" {
+		if (v.FromName == "") || (v.ToName == "") {
 			log.Println("fail: name is empty")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if len(v.Name) >= 50 {
-			log.Println("fail: name is too long")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -118,7 +89,7 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec("INSERT INTO userlist (id,name,point) VALUE (?,?,?)", id, v.Name, v.Point)
+		_, err = tx.Exec("INSERT INTO messagelist (id,fromname,toname,point,message) VALUE (?,?,?,?,?)", id, v.FromName, v.ToName, v.Point, v.Message)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.Prepare, %v\n", err)
@@ -141,33 +112,4 @@ func handlerUser(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-}
-
-func main() {
-	http.HandleFunc("/user", handlerUser)
-	http.HandleFunc("/message", handlerMessage)
-
-	// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
-	closeDBWithSysCall()
-	// 8000番ポートでリクエストを待ち受ける
-	log.Println("Listening...")
-	if err := http.ListenAndServe(":8000", nil); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
-func closeDBWithSysCall() {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		s := <-sig
-		log.Printf("received syscall, %v", s)
-
-		if err := db.Close(); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("success: db.Close()")
-		os.Exit(0)
-	}()
 }
