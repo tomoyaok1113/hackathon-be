@@ -37,8 +37,8 @@ func handlerMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.Method {
 	case http.MethodGet:
-		username := r.URL.Query().Get("fromname")
-		rows, err := db.Query("SELECT id, fromname, point, message FROM messagelist WHERE toname=?", username)
+		toname := r.URL.Query().Get("toname")
+		rows, err := db.Query("SELECT id, fromname, point, message FROM messagelist WHERE toname=?", toname)
 		if err != nil {
 			log.Printf("fail: db.Query, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
