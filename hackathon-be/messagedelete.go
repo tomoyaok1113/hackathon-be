@@ -47,7 +47,7 @@ func handlerDeleteMessage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		point = point - v.Point
-		_, err = tx.Exec("UPDATE userlist SET point WHERE name=?", v.ToName)
+		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", point, v.ToName)
 		_, err = tx.Exec("DELETE FROM messagelist WHERE id=?", v.Id)
 		if err != nil {
 			tx.Rollback()
