@@ -16,7 +16,6 @@ type GetPoint struct {
 
 type AddPoint struct {
 	ToName string `json:"toName"`
-	Point  int    `json:"point"`
 }
 
 func handlerPoint(w http.ResponseWriter, r *http.Request) {
