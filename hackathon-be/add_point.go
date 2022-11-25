@@ -10,6 +10,10 @@ import (
 	"net/http"
 )
 
+type GetPoint struct {
+	Point int `json:"point"`
+}
+
 type AddPoint struct {
 	ToName string `json:"toName"`
 	Point  int    `json:"point"`
@@ -31,6 +35,20 @@ func handlerPoint(w http.ResponseWriter, r *http.Request) {
 			log.Printf("fail: db.Query, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
+		}
+		users := make([]GetPoint, 0)
+		for point.Next() {
+			var u GetPoint
+			if err := point.Scan(&u.Point); err != nil {
+				log.Printf("fail: rows.Scan, %v\n", err)
+
+				if err := point.Close(); err != nil { // 500を返して終了するが、その前にrowsのClose処理が必要
+					log.Printf("fail: rows.Close(), %v\n", err)
+				}
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			users = append(users, u)
 		}
 
 		// ②-4
