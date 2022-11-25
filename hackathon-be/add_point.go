@@ -52,7 +52,7 @@ func handlerPoint(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// ②-4
-		bytes, err := json.Marshal(point)
+		bytes, err := json.Marshal(users)
 		if err != nil {
 			log.Printf("fail: json.Marshal, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
