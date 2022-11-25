@@ -74,7 +74,15 @@ func handlerPoint(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec("UPDATE userlist SET point+=v.Point WHERE name=?", v.ToName)
+		point := 0
+		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", v.ToName).Scan(&point); err != nil {
+			tx.Rollback()
+			log.Printf("fail: db.Prepare, %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		point = point + v.Point
+		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", point, v.ToName)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.Prepare, %v\n", err)
