@@ -147,6 +147,7 @@ func main() {
 	http.HandleFunc("/user", handlerUser)
 	http.HandleFunc("/message", handlerMessage)
 	http.HandleFunc("/messagesub", handlerMessageForSubmitlist)
+	http.HandleFunc("/point", handlerPoint)
 
 	// ③ Ctrl+CでHTTPサーバー停止時にDBをクローズする
 	closeDBWithSysCall()
