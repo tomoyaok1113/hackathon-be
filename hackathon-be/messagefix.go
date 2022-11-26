@@ -40,7 +40,13 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
+		messagepoint := 0
+		if err := tx.QueryRow("SELECT point FROM messagelist WHERE id = ?", v.Id).Scan(&messagepoint); err != nil {
+			tx.Rollback()
+			log.Printf("fail: db.messagepoint, %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		username, err := tx.Query("SELECT toname FROM messagelist WHERE id = ?", v.Id)
 		if err != nil {
 			tx.Rollback()
@@ -52,13 +58,6 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", username).Scan(&userpoint); err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.userpoint, %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		messagepoint := 0
-		if err := tx.QueryRow("SELECT point FROM messagelist WHERE id = ?", v.Id).Scan(&messagepoint); err != nil {
-			tx.Rollback()
-			log.Printf("fail: db.messagepoint, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
