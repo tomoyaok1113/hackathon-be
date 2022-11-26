@@ -59,7 +59,7 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("%v\n", username)
 		userpoint := 0
-		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", username).Scan(&userpoint); err != nil {
+		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", &username).Scan(&userpoint); err != nil {
 			tx.Rollback()
 			log.Printf("userpointerror")
 			log.Printf("fail: db.userpoint, %v\n", err)
