@@ -40,8 +40,9 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		username := ""
-		if err := tx.QueryRow("SELECT toname FROM messagelist WHERE id = ?", v.Id).Scan(&username); err != nil {
+
+		username, err := tx.Query("SELECT toname FROM messagelist WHERE id = ?", v.Id)
+		if err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.Prepare, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
