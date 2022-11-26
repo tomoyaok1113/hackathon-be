@@ -43,24 +43,30 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 		messagepoint := 0
 		if err := tx.QueryRow("SELECT point FROM messagelist WHERE id = ?", v.Id).Scan(&messagepoint); err != nil {
 			tx.Rollback()
+
 			log.Printf("fail: db.messagepoint, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		log.Printf("%v\n", messagepoint)
 		username, err := tx.Query("SELECT toname FROM messagelist WHERE id = ?", v.Id)
 		if err != nil {
 			tx.Rollback()
+			log.Printf("usernameerror")
 			log.Printf("fail: db.username, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		log.Printf("%v\n", username)
 		userpoint := 0
-		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", username).Scan(&userpoint); err != nil {
+		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", &username).Scan(&userpoint); err != nil {
 			tx.Rollback()
+			log.Printf("userpointerror")
 			log.Printf("fail: db.userpoint, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		log.Printf("%v\n", userpoint)
 		userpoint = userpoint - messagepoint
 		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", userpoint, username)
 		_, err = tx.Exec("UPDATE messagelist SET toname=?, point=?, message=? WHERE id=?", v.ToName, v.Point, v.Message, v.Id)
