@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/joho/godotenv"
 	_ "github.com/oklog/ulid"
@@ -48,6 +49,7 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		fmt.Println(username)
 		messagepoint := 0
 		if err := tx.QueryRow("SELECT point FROM messagelist WHERE id = ?", v.Id).Scan(&messagepoint); err != nil {
 			tx.Rollback()
@@ -55,6 +57,7 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
 		userpoint := 0
 		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", username).Scan(&userpoint); err != nil {
 			tx.Rollback()
@@ -62,6 +65,7 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
 		userpoint = userpoint - messagepoint
 		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", userpoint, username)
 		if err != nil {
@@ -70,7 +74,7 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = tx.Exec("UPDATE messagelist SET toname=? point=? message=? WHERE id=?", v.ToName, v.Point, v.Message, v.Id)
+		_, err = tx.Exec("UPDATE messagelist SET toname=?, point=?, message=? WHERE id=?", v.ToName, v.Point, v.Message, v.Id)
 		if err != nil {
 			tx.Rollback()
 			log.Printf("fail: db.Prepare, %v\n", err)
