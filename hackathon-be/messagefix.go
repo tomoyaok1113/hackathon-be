@@ -12,6 +12,7 @@ import (
 
 type FixMessage struct {
 	Id      string `json:"id"`
+	Fixname string `json:"fixname"`
 	ToName  string `json:"toName"`
 	Point   int    `json:"point"`
 	Message string `json:"message"`
@@ -49,26 +50,16 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Printf("%v\n", messagepoint)
-		username := ""
-		if err := tx.QueryRow("SELECT toname FROM messagelist WHERE id = ?", v.Id).Scan(&username); err != nil {
-			tx.Rollback()
-			log.Printf("usernameerror")
-			log.Printf("fail: db.username, %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		log.Printf("%v\n", username)
 		userpoint := 0
-		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", username).Scan(&userpoint); err != nil {
+		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", v.Fixname).Scan(&userpoint); err != nil {
 			tx.Rollback()
-			log.Printf("userpointerror")
 			log.Printf("fail: db.userpoint, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		log.Printf("%v\n", userpoint)
 		userpoint = userpoint - messagepoint
-		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", userpoint, username)
+		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", userpoint, v.Fixname)
 		_, err = tx.Exec("UPDATE messagelist SET toname=?, point=?, message=? WHERE id=?", v.ToName, v.Point, v.Message, v.Id)
 		if err != nil {
 			tx.Rollback()
