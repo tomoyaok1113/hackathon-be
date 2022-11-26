@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/joho/godotenv"
 	_ "github.com/oklog/ulid"
@@ -45,15 +44,14 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 		username, err := tx.Query("SELECT toname FROM messagelist WHERE id = ?", v.Id)
 		if err != nil {
 			tx.Rollback()
-			log.Printf("fail: db.Prepare, %v\n", err)
+			log.Printf("fail: db.username, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		fmt.Println(username)
 		messagepoint := 0
 		if err := tx.QueryRow("SELECT point FROM messagelist WHERE id = ?", v.Id).Scan(&messagepoint); err != nil {
 			tx.Rollback()
-			log.Printf("fail: db.Prepare, %v\n", err)
+			log.Printf("fail: db.messagepoint, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -61,7 +59,7 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 		userpoint := 0
 		if err := tx.QueryRow("SELECT point FROM userlist WHERE name = ?", username).Scan(&userpoint); err != nil {
 			tx.Rollback()
-			log.Printf("fail: db.Prepare, %v\n", err)
+			log.Printf("fail: db.userpoint, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -70,14 +68,14 @@ func handlerFixMessage(w http.ResponseWriter, r *http.Request) {
 		_, err = tx.Exec("UPDATE userlist SET point=? WHERE name=?", userpoint, username)
 		if err != nil {
 			tx.Rollback()
-			log.Printf("fail: db.Prepare, %v\n", err)
+			log.Printf("fail: db.updateuserlist, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		_, err = tx.Exec("UPDATE messagelist SET toname=?, point=?, message=? WHERE id=?", v.ToName, v.Point, v.Message, v.Id)
 		if err != nil {
 			tx.Rollback()
-			log.Printf("fail: db.Prepare, %v\n", err)
+			log.Printf("fail: db.updatemessagelist, %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
